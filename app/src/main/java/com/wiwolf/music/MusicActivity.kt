@@ -3,54 +3,35 @@ package com.wiwolf.music
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.ComponentName
-import android.content.Context
+import android.content.ContentValues
 import android.content.Intent
 import android.content.ServiceConnection
-import android.media.MediaMetadata
-import android.media.session.MediaSession
-import android.media.session.PlaybackState
-import android.os.Build
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.database.DatabaseUtils
 import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
 import android.os.IBinder
 import android.provider.MediaStore
-import android.text.SpannableStringBuilder
 import android.util.Log
-import android.view.View
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.AbsListView
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.ImageButton
 import android.widget.ListView
-import android.widget.SeekBar
-import android.widget.SeekBar.OnSeekBarChangeListener
-import android.widget.TextView
 import android.widget.Toast
-import com.karumi.dexter.Dexter
-import com.karumi.dexter.MultiplePermissionsReport
-import com.karumi.dexter.PermissionToken
-import com.karumi.dexter.listener.PermissionDeniedResponse
-import com.karumi.dexter.listener.PermissionGrantedResponse
-import com.karumi.dexter.listener.PermissionRequest
-import com.karumi.dexter.listener.multi.MultiplePermissionsListener
-import com.karumi.dexter.listener.single.PermissionListener
-import com.wiwolf.music.data.MuService
-import com.wiwolf.music.data.Mukis
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 
 class MusicActivity : Activity() {
     private lateinit var listview : ListView
-    private var items = mutableListOf<Mukis>()
-    private val array by lazy{ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf<String>())}
+    private var items = mutableListOf<ContentValues>()
+    private val array by lazy{ArrayAdapter(this, android.R.layout.simple_list_item_checked, mutableListOf<String>())}
 
     private var musicService: MuService? = null
+
 
     private var playIntent: Intent? = null
 
@@ -60,39 +41,15 @@ class MusicActivity : Activity() {
 
     private var playbackPaused: Boolean = false
 
-    private var select = -1
+    private val select
+        get() = musicService?.songPosition ?:-1
+
 
     private var changeIcon : (Int) -> Unit = {}
 
     private var showPlay : (Boolean) -> Unit = {}
 
-    val meca = object : MediaSession.Callback() {
-        val m get() = musicService?.mediaPlayer
-        override fun onPlay() {
-            m?.start()
-        }
 
-        override fun onPause() {
-            m?.pause()
-        }
-
-        override fun onStop() {
-            m?.stop()
-        }
-
-        override fun onSeekTo(pos: Long) {
-            m?.seekTo(pos.toInt())
-        }
-    }
-
-    private val med by lazy {
-        MediaSession(this, "Music").apply {
-            isActive = true
-            setCallback(meca)
-            setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
-
-        }
-    }
 
 
 
@@ -125,11 +82,27 @@ class MusicActivity : Activity() {
 
 
             musicService = binder.getService
+            musicService!!
 
             musicService!!.setList(items)
 
+            musicService!!.runningActivity = this@MusicActivity
+
             musicService!!.mediaPlayer.setOnTimedTextListener { mp, text ->
                 Toast.makeText(this@MusicActivity, text.text, Toast.LENGTH_SHORT).show()
+            }
+
+            if(musicService?.songPosition != -1){
+                musicService?.show()
+                // 1. Set the selection programmatically (e.g., default to the first item)
+                runOnUiThread{
+                    listview.setItemChecked(select, true)
+
+
+                    // 2. Optional: Scroll the list smoothly to the selected item if it is off-screen
+                    listview.smoothScrollToPosition(select)
+                }
+
             }
 
             musicBound = true
@@ -145,191 +118,138 @@ class MusicActivity : Activity() {
     }
 
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.apply {
+            add("Settings")
+            add("Exit")
+        }
+        return super.onCreateOptionsMenu(menu)
+    }
+
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if(item.title == "Exit"){
+            finish()
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+
 
 
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_music)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        setContentView(R.layout.activity_music_playlist)
         actionBar?.apply{
             elevation = 0F
         }
 
 
 
-        val play = findViewById<ImageButton>(R.id.play)
-        play.setOnClickListener {
-            if(musicService!!.mediaPlayer.isPlaying){
-                musicService!!.mediaPlayer.pause()
-            }else{
-                musicService!!.mediaPlayer.start()
-            }
-        }
-        val seekbar = findViewById<SeekBar>(R.id.slider)
-        findViewById<View>(R.id.close).setOnClickListener {
-            finishAndRemoveTask()
-        }
+        listview = findViewById<ListView>(R.id.list)
+
+        listview.choiceMode = AbsListView.CHOICE_MODE_SINGLE
         listview = findViewById(R.id.list)
         listview.adapter = array
-        val peli = object : PermissionListener{
-            override fun onPermissionGranted(p0: PermissionGrantedResponse?) {
-                showSong()
+
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.READ_MEDIA_AUDIO,
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.POST_NOTIFICATIONS
+            ),10
+        )
+
+
+
+
+
+
+
+
+        listview.onItemClickListener = AdapterView.OnItemClickListener{_,_,position,_->
+            musicService?.setList(items)
+            if(position!=select){
+                musicService?.setSong(position)
+                musicService?.playSong()
             }
-
-            override fun onPermissionDenied(p0: PermissionDeniedResponse?) {
-
-            }
-
-            override fun onPermissionRationaleShouldBeShown(
-                p0: PermissionRequest?,
-                p1: PermissionToken?,
-            ) {
-                p1?.continuePermissionRequest()
-            }
-
-        }
-        val mpl = object : MultiplePermissionsListener {
-            override fun onPermissionsChecked(p0: MultiplePermissionsReport?) {
-                showSong()
-            }
-
-            override fun onPermissionRationaleShouldBeShown(
-                p0: MutableList<PermissionRequest>?,
-                p1: PermissionToken?,
-            ) {
-                p1?.continuePermissionRequest()
-            }
-
-        }
-        Dexter.withContext(this).withPermissions(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE).withListener(mpl).check()
-
-
-
-
-        listview.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
-            musicService?.setSong(position)
-            select = position
-            musicService?.playSong()
-
-            findViewById<TextView>(R.id.name).setText(items[select].name)
+            musicService?.show()
         }
 
+        listview.setOnScrollListener(object : AbsListView.OnScrollListener{
+            override fun onScroll(
+                view: AbsListView?, firstVisibleItem: Int,
+                visibleItemCount: Int, totalItemCount: Int) {
+                if(view ==null)
+                    return
+                if ((firstVisibleItem > 0) or (view!!.getChildCount() > 0) and
+                    ((view!!.getChildAt(0)?.getTop()?:0) < 0)) {
 
-
-        val mHandler: Handler = Handler()
-
-//Make sure you update Seekbar on UI thread
-        runOnUiThread(object : Runnable {
-            @SuppressLint("DefaultLocale")
-            override fun run() {
-                if (musicService != null) {
-                    if(select != -1) {
-                        try{
-                            med.controller
-                            val mCurrentPosition: Int =
-                                musicService!!.mediaPlayer.currentPosition / 1000
-                            val max: Int = musicService!!.mediaPlayer.duration / 1000
-                            seekbar.setProgress(mCurrentPosition)
-                            seekbar.max = max
-                            findViewById<TextView>(R.id.name).text = items[select].name
-                            findViewById<TextView>(R.id.dur).text = SpannableStringBuilder(
-                                "${time(musicService!!.mediaPlayer.currentPosition)} / ${
-                                    time(musicService!!.mediaPlayer.duration)
-                                }"
-                            )
-                            if (!musicService!!.mediaPlayer.isPlaying) {
-                                play.setImageResource(android.R.drawable.ic_media_play)
-                            } else {
-                                play.setImageResource(android.R.drawable.ic_media_pause)
-                            }
-                            med.setPlaybackState(getPlayBackState())
-                            med.setMetadata(
-                                MediaMetadata.Builder()
-                                    .putLong(MediaMetadata.METADATA_KEY_DURATION, max.toLong() * 1000)
-                                    .build()
-                            )
-                            showNotif(mCurrentPosition, max)
-                        }catch (e: Throwable){
-
-                        }
-                    }
-                }
-                mHandler.post(this)
-            }
-
-            private fun getPlayBackState(): PlaybackState? {
-                return PlaybackState.Builder()
-                    .setState(
-                        if (musicService?.mediaPlayer?.isPlaying == true) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
-                        (musicService?.mediaPlayer?.currentPosition?.toLong() ?: 0L), 0F
-                    )
-                    .setActions(PlaybackState.ACTION_SEEK_TO or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS or PlaybackState.ACTION_PLAY_PAUSE)
-                    .build()
-            }
-
-            private fun showNotif(mCurrentPosition: Int, max: Int) {
-                val b = Notification.Builder(this@MusicActivity, "c").apply {
-                    setSmallIcon(android.R.drawable.ic_media_play)
-                    setContentTitle(items[select].name)
-                    setContentText(time(musicService!!.mediaPlayer.currentPosition))
-                    setPriority(Notification.PRIORITY_LOW)
-                    setProgress(max, mCurrentPosition, false)
-                    setOngoing(true)
-                    setStyle(Notification.MediaStyle().setShowActionsInCompactView(0,1,2,3).setMediaSession(med.sessionToken))
-                    setOnlyAlertOnce(true)
-                    setCategory(Notification.CATEGORY_SERVICE)
-                }.build()
-                val n = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                n.createNotificationChannel(NotificationChannel("c", "Music", NotificationManager.IMPORTANCE_MIN))
-                n.notify(1, b)
-            }
-        })
-
-        seekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onStopTrackingTouch(seekBar: SeekBar) {
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar) {
-            }
-
-            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (musicService != null && fromUser && (select != -1)) {
-                    musicService!!.mediaPlayer.seekTo(progress * 1000)
+                    actionBar?.setElevation(8f);
+                } else {
+                    actionBar?.setElevation(0f);
                 }
             }
-        })
 
+            override fun onScrollStateChanged(p0: AbsListView?, p1: Int) {
+
+            }
+        })
 
     }
+
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String?>,
+        grantResults: IntArray
+    ) {
+        if(requestCode==10){
+            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                showSong()
+            }
+            if(grantResults[2]== PackageManager.PERMISSION_GRANTED){
+
+            }
+        }
+    }
+
+
+
 
 
 
     private fun showSong() {
-        getSongList()
-        items.sortWith { a, b -> a.name.compareTo(b.name) }
-        if(!array.isEmpty){
-            array.clear()
+
+        fun ContentValues.name():String{
+            return getAsString(MediaStore.Audio.Media.TITLE).orEmpty()
         }
-        array.addAll(items.map { it.name })
+        Thread{
+            getSongList()
+            items.sortWith { a, b -> a.name().compareTo(b.name()) }
+            if (!array.isEmpty) {
+                array.clear()
+            }
+            runOnUiThread {
+                array.addAll(items.map { it.name() })
+            }
+        }.start()
+
     }
 
-    private fun showSongList() {
-        val list = findSongList(Environment.getExternalStorageDirectory())
-        items = MutableList<Mukis>(list.size){Mukis(it.toLong(), "", "")}
-        for (i in 0 until list.size) {
-            items[i].name = list[i].name.replace(".mp3", "").replace(".wav", "")
-        }
-        items.sortWith { a, b -> a.name.compareTo(b.name) }
-        if(!array.isEmpty){
-            array.clear()
-        }
-        array.addAll(items.map { it.name })
-    }
+
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
-        select = savedInstanceState.getInt("select", -1)
         super.onRestoreInstanceState(savedInstanceState)
+        Thread{
+            while (musicService==null){}
+            runOnUiThread{
+                musicService?.songPosition = savedInstanceState.getInt("select")
+            }
+        }.start()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -352,21 +272,11 @@ class MusicActivity : Activity() {
 
         if ((musicCursor != null) && musicCursor.moveToFirst()) {
 
-            val titleColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
-
-            val idColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media._ID)
-
-            val durationColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.DURATION)
-
             do {
-
-                val thisId = musicCursor.getLong(idColumn)
-
-                val thisTitle = musicCursor.getString(titleColumn)
-
-                val thisDuration = musicCursor.getString(durationColumn)
-
-                items.add(Mukis(thisId, thisTitle, thisDuration))
+                val item = ContentValues()
+                DatabaseUtils.cursorRowToContentValues(musicCursor, item)
+                items.add(item)
+                ContentValues()
 
 
 
