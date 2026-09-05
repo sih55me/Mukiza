@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Mz" parent="android:Theme.DeviceDefault.Light">
+    <style name="Theme.Mz" parent="android:Theme.DeviceDefault">
+        <item name="android:homeAsUpIndicator">@drawable/back</item>
+        <item name="android:actionModeCloseDrawable">@drawable/back</item>
+        <item name="android:actionOverflowButtonStyle">@style/Widget.Mz.Opt</item>
+        <item name="android:toolbarStyle">@android:style/Widget.Material.Toolbar</item>
+        <item name="android:actionBarTabStyle">@android:style/Widget.Holo.ActionBar.TabView</item>
+        <item name="android:tabWidgetStyle">@android:style/Widget.Material.TabWidget</item>
+        <item name="android:actionBarStyle">@android:style/Widget.Material.ActionBar.Solid</item>
+        <item name="android:statusBarColor">?android:colorPrimary</item>
+        <item name="android:navigationBarColor">?android:colorBackground</item>
+    </style>
+
+    <style name="Theme.Mz.PlayOn" parent="android:Theme.DeviceDefault">
         <item name="android:homeAsUpIndicator">@drawable/back</item>
         <item name="android:actionModeCloseDrawable">@drawable/back</item>
         <item name="android:actionOverflowButtonStyle">@style/Widget.Mz.Opt</item>

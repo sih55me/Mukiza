@@ -1,3 +1,108 @@
 <resources>
-    <string name="app_name">Mukiza</string>
+    <string name="app_name" translatable="false">Mukiza</string>
+    <string name="add">Add</string>
+    <string name="example_add">Example : youtube.com/watch?v=vDAO7H5w4_I = vDAO7H5w4_I</string>
+    <string name="set">Settings</string>
+    <string name="title_activity_video" translatable="false">Video</string>
+    <string name="share">Share</string>
+    <string name="app_title">LIVE TV</string>
+    <string name="del">Delete</string>
+    <string name="nv">Video Title</string>
+    <string name="nvi">Video id</string>
+    <string name="del_com">Delete this video permanently?</string>
+    <string name="ul">Unlock</string>
+    <string name="empty_video">Video unavailable</string>
+    <string name="sound">Sound</string>
+    <string name="speed">Speed</string>
+    <string name="open">Open</string>
+    <string name="close">Close</string>
+    <string name="library">Library</string>
+    <string name="options">Options</string>
+    <string name="sec">Security</string>
+    <string name="pt2">No Annoying Ads</string>
+    <string name="pc2">Forget about ads popping up in the middle of your favorite videos or songs. This platform allows you to watch and listen to content without any ads interruptions, so you can focus fully on what you love.</string>
+    <string name="pc1">Click \"next\" for next presentation</string>
+    <string name="pt1">Welcome to Wetube!</string>
+    <string name="pt3">Awesome Full Features</string>
+    <string name="pc3">The platform is equipped with various features designed to enhance your experience. Easily find interesting content using the advanced search feature. Personalize your experience with recommendations that suit your tastes. Access your content on various devices, anytime and anywhere.</string>
+    <string name="apr">Appearance</string>
+    <string name="adv">Advanced</string>
+    <string name="appwidget_text" translatable="false">Thumbnail</string>
+    <string name="add_widget">Add widget</string>
+    <string name="app_widget_description">Show random thumbnail from saved video</string>
+    <string name="rewind">Rewind</string>
+    <string name="forward">Forward</string>
+    <string name="play">Play</string>
+    <string name="toggleMute">Toggle Mute</string>
+    <string name="pause">Pause</string>
+    <string name="about">About</string>
+    <string name="fullscreen">Enter Fullscreen</string>
+    <string name="exit_fullscreen">Exit Fullscreen</string>
+    <string name="explore">Explore</string>
+    <string name="vid_upd">Video metadata has been edited!</string>
+    <string name="vid_del">Video has been deleted!</string>
+    <string name="no_vid">Unable to play video</string>
+    <string name="related_movies">Related Videos</string>
+    <string name="watch_trailer_1">Watch</string>
+    <string name="watch_trailer_2">FREE</string>
+    <string name="rent_1">Rent By Day</string>
+    <string name="buy_1">Buy and Own</string>
+    <string name="movie" translatable="false">Movie</string>
+
+    <!-- Error messages -->
+    <string name="error_fragment_message">An error occurred</string>
+    <string name="dismiss_error">Dismiss</string>
+    <string name="title_activity_pass">Password</string>
+    <string name="none">None</string>
+    <string name="rating">Rating</string>
+    <string name="date">Date</string>
+    <string name="vidcount">Videos Count</string>
+    <string name="viewcount">Views Count</string>
+    <string name="look_user_videos">Look User Videos</string>
+    <string name="order">Order</string>
+    <string name="no_history_saved">No history saved</string>
+    <string name="history_delete_all">Clear all</string>
+    <string name="del_sel_vid">Delete selected video?</string>
+    <string name="exit">Exit</string>
+    <string name="title_activity_channel_info">Channel Info</string>
+    <string name="tab_text_1" translatable="false">Tab 1</string>
+    <string name="tab_text_2" translatable="false">Tab 2</string>
+    <string name="general">General</string>
+    <string name="Security_Promt_Title">Wait!</string>
+    <string name="Security_Promt_Desc">Please Enter password to continue this action.</string>
+    <string name="delete_result_if_invisible">Delete the result if in another page</string>
+    <string name="auto_add">Automaticlly add to library when select the video</string>
+    <string name="my_profile">My Profile</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="bar_visibility_label">Side/Bottom bar visibility label</string>
+
+
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="home">Home</string>
+    <string name="history_search">History Search</string>
+    <string name="history">History</string>
+    <string name="undo">Undo</string>
+    <string name="vid_add">Video added to!</string>
+    <string name="theme">Theme</string>
+    <string name="bc">Blacklist channel</string>
+    <string name="del_sh">Delete search History</string>
+    <string name="tovid">Total videos</string>
+    <string name="storage">Storage</string>
+
+    <string name="favcha">Favorite Channel</string>
+    <string name="vefu">Enter Portrait Mode?</string>
+    <string name="vefume">You\'ll enter fullscreen with Portrait Mode</string>
+    <string name="enter">Enter</string>
+    <string name="next">Next</string>
+    <string name="prev">Previous</string>
+    <string name="versi">"Version : "</string>
+    <string name="versi_gen">"Gen Version : "</string>
+    <string name="versi_name">Version</string>
+    <string name="rv_desc" translatable="false">Some Random Video that play when your phone is dreaming something.... (Need Internet to work)</string>
+    <string name="select">Select</string>
+    <string name="vidtwe">Video Tweaks</string>
+    <string name="clear">Clear</string>
+    <string name="random_qs">Shuffle Library</string>
+    <string name="desc">Description</string>
 </resources>

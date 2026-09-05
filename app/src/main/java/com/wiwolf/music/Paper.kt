@@ -21,7 +21,7 @@ import android.view.WindowManager
  * * Can Show and add listener for Back Button
  * * Can customize the toolbar using [getActionBar]
  */
-open class Paper @JvmOverloads constructor(context: Context, showActionBar : Boolean = true): Dialog(context, context.getThemeId()), AutoCloseable {
+open class Paper @JvmOverloads constructor(context: Context, showActionBar : Boolean = true, style:Int=context.getThemeId() ): Dialog(context, style), AutoCloseable {
 
     var useBlur = false
 
