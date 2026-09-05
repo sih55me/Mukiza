@@ -35,7 +35,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.SeekBar
-import android.widget.TabHost
 import android.widget.TextView
 import android.widget.ViewAnimator
 import java.lang.String
@@ -131,6 +130,10 @@ class MuService: Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorL
 
 
     override fun onBind(intent: Intent?): IBinder = musicBinder
+
+    override fun onRebind(intent: Intent?) {
+        super.onRebind(intent)
+    }
 
     override fun onUnbind(intent: Intent?): Boolean {
         return true
@@ -392,11 +395,9 @@ class MuService: Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorL
                     seekbar?.setProgress(mCurrentPosition)
                     seekbar?.max = max
                     currentItem.getAsString(MediaStore.Audio.Media.TITLE)?.let{name->
-                        d?.findViewById<TextView>(R.id.name)?.text = name
-                        d?.actionBar?.setTitle(name)
+                        d?.findViewById<TextView>(R.id.song)?.text = name
                     }
-                    d?.actionBar?.setSubtitle(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
-
+                    d?.findViewById<TextView>(R.id.artist)?.setText(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
                     d?.findViewById<TextView>(R.id.dur)?.text = timeFormat(mediaPlayer.duration)
                     d?.findViewById<TextView>(R.id.pos)?.text = timeFormat(mediaPlayer.currentPosition)
                     if (!mediaPlayer.isPlaying) {
@@ -426,17 +427,7 @@ class MuService: Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorL
     }
 
     private fun initTabs(){
-        d?.findViewById<TabHost>(R.id.tabho)?.let {
-            it.setup()
-            if(it.tabWidget.tabCount==0){
-                arrayOf(
-                    it.newTabSpec("cvr").setContent(R.id.coverSong).setIndicator("Cover"),
-                    it.newTabSpec("mti").setContent(R.id.mti).setIndicator("Metadata")
-                ).forEach { t ->
-                    it.addTab(t)
-                }
-            }
-        }
+
     }
 
     fun initGUI(savedInstanceState: Bundle?){

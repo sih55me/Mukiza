@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    style="?android:borderlessButtonStyle"
+    android:padding="5dp"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/artist"
+        android:layout_width="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textSize="11.5sp"
+        android:gravity="center"
+        android:layout_below="@+id/song"
+        android:clickable="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        tools:text="wiwolf" />
+
+
+
+    <TextView
+        android:id="@+id/song"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginRight="5dp"
+        android:singleLine="true"
+        android:clickable="false"
+        android:focusable="false"
+        android:textSize="16sp"
+        android:focusableInTouchMode="false"
+        android:maxLines="1"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:text="lalala"
+        android:textStyle="bold" />
+
+
+
+</RelativeLayout>

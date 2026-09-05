@@ -16,14 +16,23 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.provider.MediaStore
+import android.text.SpannableStringBuilder
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.view.WindowManager
 import android.widget.AbsListView
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ListView
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
+import android.widget.ViewAnimator
+import io.noties.markwon.Markwon
+import io.noties.markwon.core.CorePlugin
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +40,7 @@ import java.util.concurrent.TimeUnit
 class MusicActivity : Activity() {
     private lateinit var listview : ListView
     private var items = mutableListOf<ContentValues>()
-    private val array by lazy{ArrayAdapter(this, android.R.layout.simple_list_item_checked, mutableListOf<String>())}
+    private val array by lazy{ArrayAdapter(this, R.layout.playlist_item, mutableListOf<String>())}
 
     private var musicService: MuService? = null
 
@@ -158,6 +167,8 @@ class MusicActivity : Activity() {
 
 
 
+
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -223,6 +234,12 @@ class MusicActivity : Activity() {
     }
 
 
+    fun saveDataForRecreate(b:Bundle){
+        b.putParcelable("currentItem", musicService?.currentItem)
+        b.putInt("currentIndex", musicService?.songPosition?:-1)
+    }
+
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String?>,
@@ -250,14 +267,51 @@ class MusicActivity : Activity() {
                 override fun show() {
                     musicService?.d = this
                     setContentView(R.layout.now_playing)
-                    musicService?.initGUI(null)
                     setOnDismissListener {
                         removeDialog(id)
                     }
                     super.show()
+                    actionBar?.setDisplayShowCustomEnabled(true)
+                    actionBar?.setDisplayShowTitleEnabled(false)
+                    actionBar?.setCustomView(R.layout.music_title)
                     actionBar?.setDisplayHomeAsUpEnabled(true)
                     actionBar?.elevation=0F
                     musicService?.isShow = isShowing
+                    musicService?.initGUI(null)
+                    val infoT = layoutInflater.inflate(R.layout.info_mtdt,null)
+                    val infoPopup = PopupWindow(
+                        infoT,
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        true
+                    )
+                    val m = Markwon.builder(context)
+                        .usePlugin(CorePlugin.create())
+                        .usePlugin(StrikethroughPlugin.create())
+                        .build()
+                    infoPopup.isFocusable = true
+                    infoPopup.isTouchModal = false
+                    infoT.findViewById<View>(R.id.more)?.setOnClickListener {
+                        infoPopup.dismiss()
+                        findViewById<ViewAnimator>(R.id.root)?.displayedChild = 1
+                    }
+                    infoT.findViewById<View>(R.id.close)?.setOnClickListener {
+                        infoPopup.dismiss()
+                    }
+                    actionBar?.customView?.setOnClickListener {
+                        if(!infoPopup.isShowing){
+                            val msg = SpannableStringBuilder("")
+                            infoT.findViewById<TextView>(R.id.title)?.setText(musicService?.currentItem?.getAsString("title"))
+                            msg.append("- Album: ${musicService?.currentItem?.getAsString("album")}\n")
+                            msg.append("- Artist: ${musicService?.currentItem?.getAsString("artist")}\n")
+                            msg.append("- Author: ${musicService?.currentItem?.getAsString("author")}\n")
+                            msg.append("- Where?: ${musicService?.currentItem?.getAsString("_data")}\n")
+                            m.setMarkdown(infoT.findViewById<TextView>(R.id.info), msg.toString())
+                            infoPopup.showAsDropDown(it)
+                        }else{
+                            infoPopup.dismiss()
+                        }
+                    }
                 }
 
                 override fun onAttachedToWindow() {
@@ -283,7 +337,7 @@ class MusicActivity : Activity() {
 
                 override fun onCreateOptionsMenu(menu: Menu): Boolean {
                     val sped = menu.addSubMenu(R.string.speed).setIcon(R.drawable.speed)
-                    sped.item.setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+                    sped.item
                     sped.add("0.25").setOnMenuItemClickListener {
                         cs(0.25F)
                         true
@@ -347,6 +401,7 @@ class MusicActivity : Activity() {
 
                 override fun onSaveInstanceState(): Bundle {
                     val o = super.onSaveInstanceState()
+                    saveDataForRecreate(o)
                     return o
                 }
 
@@ -354,16 +409,29 @@ class MusicActivity : Activity() {
                     onBackPressed()
                 }
 
+                override fun onBackPressed() {
+                    if(currentActionMode != null){
+                        destroyActionMode()
+                        return
+                    }
+                    val r = findViewById<ViewAnimator>(R.id.root)
+                    if(r.displayedChild > 0){
+                        r.showPrevious()
+                        return
+                    }
+                    dismiss()
+                }
+
 
 
                 override fun onDetachedFromWindow() {
+                    musicService!!.mHandler.removeCallbacks(musicService!!.onUpdateGUI)
                     super.onDetachedFromWindow()
 
                 }
 
 
                 override fun dismiss() {
-                    musicService!!.mHandler.removeCallbacks(musicService!!.onUpdateGUI)
                     musicService!!.isShow = false
                     super.dismiss()
                 }
@@ -401,13 +469,13 @@ class MusicActivity : Activity() {
         Thread{
             while (musicService==null){}
             runOnUiThread{
-                musicService?.songPosition = savedInstanceState.getInt("select")
+                musicService?.songPosition = savedInstanceState.getInt("currentIndex")
             }
         }.start()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt("select", select)
+        saveDataForRecreate(outState)
         super.onSaveInstanceState(outState)
     }
 

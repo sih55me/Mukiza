@@ -6,9 +6,10 @@
         <item name="android:actionOverflowButtonStyle">@style/Widget.Mz.Opt</item>
         <item name="android:toolbarStyle">@android:style/Widget.Material.Toolbar</item>
         <item name="android:actionBarTabStyle">@android:style/Widget.Holo.ActionBar.TabView</item>
-        <item name="android:tabWidgetStyle">@android:style/Widget.Material.TabWidget</item>
+        <item name="android:tabWidgetStyle">@android:style/Widget.Holo.TabWidget</item>
         <item name="android:actionBarStyle">@android:style/Widget.Material.ActionBar.Solid</item>
         <item name="android:statusBarColor">?android:colorPrimary</item>
+        <item name="android:fontFamily">@font/jetbramo</item>
         <item name="android:navigationBarColor">?android:colorBackground</item>
     </style>
 
