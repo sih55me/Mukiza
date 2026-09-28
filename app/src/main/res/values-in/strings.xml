@@ -94,5 +94,6 @@
     <string name="desc">Deskripsi</string>
     <string name="clear">Bersihkan</string>
     <string name="title_activity_channel_info">Informasi Saluran</string>
+    <string name="pitch">Tinggi Nada</string>
 
 </resources>

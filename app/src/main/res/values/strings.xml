@@ -105,4 +105,5 @@
     <string name="clear">Clear</string>
     <string name="random_qs">Shuffle Library</string>
     <string name="desc">Description</string>
+    <string name="pitch">Pitch</string>
 </resources>

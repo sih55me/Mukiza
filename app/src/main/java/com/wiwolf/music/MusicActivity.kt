@@ -3,15 +3,25 @@ package com.wiwolf.music
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.Dialog
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ComponentName
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.database.DatabaseUtils
+import android.graphics.BitmapFactory
+import android.media.MediaMetadata
+import android.media.MediaMetadataRetriever
 import android.media.PlaybackParams
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -25,8 +35,11 @@ import android.view.WindowManager
 import android.widget.AbsListView
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.PopupWindow
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ViewAnimator
@@ -199,9 +212,8 @@ class MusicActivity : Activity() {
 
 
 
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+        //requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
         listview.onItemClickListener = AdapterView.OnItemClickListener{_,a,position,_->
-            musicService?.setList(items)
             if(position!=select){
                 musicService?.setSong(position)
                 musicService?.playSong()
@@ -235,8 +247,10 @@ class MusicActivity : Activity() {
 
 
     fun saveDataForRecreate(b:Bundle){
-        b.putParcelable("currentItem", musicService?.currentItem)
-        b.putInt("currentIndex", musicService?.songPosition?:-1)
+        if(musicService?.songs.isNullOrEmpty().not()){
+            b.putParcelable("currentItem", musicService?.currentItem)
+            b.putInt("currentIndex", musicService?.songPosition ?: -1)
+        }
     }
 
 
@@ -263,21 +277,250 @@ class MusicActivity : Activity() {
             return object : Paper(this@MusicActivity) {
 
 
+                val meca = object : MediaSession.Callback() {
+                    val m get() = musicService?.mediaPlayer
+                    override fun onPlay() {
+                        m?.start()
+                    }
+
+                    override fun onPause() {
+                        m?.pause()
+                    }
+
+                    override fun onStop() {
+                        m?.stop()
+                    }
+
+                    override fun onSeekTo(pos: Long) {
+                        m?.seekTo(pos.toInt())
+                    }
+
+                    override fun onRewind() {
+                        super.onRewind()
+                    }
+
+                    override fun onFastForward() {
+                        super.onFastForward()
+                    }
+
+
+                    override fun onSkipToPrevious() {
+                        musicService?.apply{
+                            if (songPosition > 1) {
+                                songPosition -= 1
+                            }
+                            playSong()
+                        }
+                        initMTI()
+                    }
+
+                    override fun onSkipToNext() {
+                        musicService?.apply{
+                            if (songPosition < songs.size - 1) {
+                                songPosition += 1
+                            }
+                            playSong()
+                        }
+                        initMTI()
+                    }
+                }
+
+                init{
+                    musicService?.med?.setCallback(meca)
+
+                }
+                private fun showNotif(mCurrentPosition: Int, max: Int) {
+                    if(musicService==null)return
+                    val currentItem = musicService!!.currentItem
+                    val b = Notification.Builder(musicService!!, "c").apply {
+                        setSmallIcon(R.drawable.play)
+                        setContentTitle(currentItem.getAsString(MediaStore.Audio.Media.TITLE))
+                        setContentText(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
+                        setPriority(Notification.PRIORITY_LOW)
+                        setProgress(max, mCurrentPosition, false)
+                        setOngoing(true)
+                        setStyle(Notification.MediaStyle().setShowActionsInCompactView(0,1,2).setMediaSession(musicService!!.med.sessionToken))
+                        setOnlyAlertOnce(true)
+                        setCategory(Notification.CATEGORY_SERVICE)
+                    }.build()
+                    val n = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    n.createNotificationChannel(
+                        NotificationChannel(
+                            "c",
+                            "Music",
+                            NotificationManager.IMPORTANCE_DEFAULT
+                        )
+                    )
+                    n.notify(1, b)
+                }
+                private fun timeFormat(int:Int) = java.lang.String.format(
+                    "%02d:%02d ",
+                    TimeUnit.MILLISECONDS.toMinutes(int.toLong()),
+                    TimeUnit.MILLISECONDS.toSeconds(
+                        int.toLong()
+                    ) - TimeUnit.MINUTES.toSeconds(
+                        TimeUnit.MILLISECONDS.toMinutes(
+                            int.toLong()
+                        )
+                    )
+                )
+
+                private val seekbar get()= findViewById<SeekBar>(R.id.slider)
+                private val play get()= findViewById<ImageButton>(R.id.play)
+
+                //wait until item ready
+                fun waitUntilPlaylist(){
+                    while(
+                        (musicService?.songs?.isNullOrEmpty() == true) or
+                        (musicService?.songPosition == -1)
+                    ){}//wait
+                }
+
+                val onUpdateGUI = Thread() {
+                    while (true){
+                        val dd = this
+                        musicService?.apply {
+                            waitUntilPlaylist()
+                            try {
+                                val mCurrentPosition: Int =
+                                    mediaPlayer.currentPosition / 1000
+                                val max: Int = mediaPlayer.duration / 1000
+                                runOnUiThread {
+                                    seekbar?.setProgress(mCurrentPosition)
+                                    seekbar?.max = max
+                                    currentItem.getAsString(MediaStore.Audio.Media.TITLE)
+                                        ?.let { name ->
+                                            dd?.findViewById<TextView>(R.id.song)?.text =
+                                                name
+                                        }
+                                    dd?.findViewById<TextView>(R.id.artist)
+                                        ?.setText(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
+                                    dd?.findViewById<TextView>(R.id.dur)?.text =
+                                        timeFormat(mediaPlayer.duration)
+                                    dd?.findViewById<TextView>(R.id.pos)?.text =
+                                        timeFormat(mediaPlayer.currentPosition)
+                                    if (!mediaPlayer.isPlaying) {
+
+                                        play?.setImageResource(R.drawable.play)
+                                        play?.tooltipText = getString(R.string.pause)
+
+                                    } else {
+                                        play?.setImageResource(R.drawable.pause)
+                                        play?.tooltipText = getString(R.string.play)
+                                    }
+                                }
+
+                                med.setPlaybackState(getPlayBackState())
+                                med.setMetadata(
+                                    MediaMetadata.Builder()
+                                        .putLong(
+                                            MediaMetadata.METADATA_KEY_DURATION,
+                                            max.toLong() * 1000
+                                        )
+                                        .build()
+                                )
+
+                                showNotif(mCurrentPosition, max)
+                            } catch (e: Throwable) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+
+
+
+                fun initGUI(){
+                    Thread{
+                        while(musicService==null){}//wait
+                        val mediaPlayer = musicService!!.mediaPlayer
+                        runOnUiThread {
+                            play?.setOnClickListener {
+                                if (mediaPlayer.isPlaying) {
+                                    mediaPlayer.pause()
+                                } else {
+                                    mediaPlayer.start()
+                                }
+                            }
+
+                            findViewById<View>(R.id.prev)?.setOnClickListener {
+                                meca.onSkipToPrevious()
+                            }
+                            findViewById<View>(R.id.next)?.setOnClickListener {
+                                meca.onSkipToNext()
+                            }
+
+                            seekbar?.setOnSeekBarChangeListener(object :
+                                SeekBar.OnSeekBarChangeListener {
+                                override fun onStopTrackingTouch(seekBar: SeekBar) {
+                                }
+
+                                override fun onStartTrackingTouch(seekBar: SeekBar) {
+                                }
+
+                                override fun onProgressChanged(
+                                    seekBar: SeekBar,
+                                    progress: Int,
+                                    fromUser: Boolean
+                                ) {
+                                    if (fromUser && (musicService?.songPosition != -1)) {
+                                        mediaPlayer.seekTo(progress * 1000)
+                                    }
+                                }
+                            })
+
+                        }
+                        if (musicService != null) {
+                            waitUntilPlaylist()
+                            loadAlbumArtFromMediaStore(
+                                musicService?.currentItem?.getAsLong(MediaStore.Audio.Media._ID)
+                                    ?: 0L
+                            )
+                            runOnUiThread{
+                                initMTI()
+                            }
+                        }
+                    }.start()
+                    onUpdateGUI.start()
+                }
+
+
+                private fun initMTI(){
+                    val ity = musicService?.currentItem
+                    if(ity==null){
+                        return
+                    }
+                    val mtia = ArrayAdapter(context, android.R.layout.simple_list_item_1, mutableListOf<kotlin.String>(""))
+                    mtia.addAll(ity.keySet().toMutableList())
+                    findViewById<ListView>(R.id.mti)?.let {
+                        if(it.adapter is ArrayAdapter<*>){
+                            (it.adapter as ArrayAdapter<*>).clear()
+                        }
+                        it.adapter = mtia
+                        it.onItemClickListener = AdapterView.OnItemClickListener { _, _, i, _ ->
+                            AlertDialog.Builder(context)
+                                .setTitle(mtia.getItem(i))
+                                .setMessage(ity.getAsString(mtia.getItem(i)))
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                        }
+                    }
+                }
+
+
 
                 override fun show() {
-                    musicService?.d = this
-                    setContentView(R.layout.now_playing)
                     setOnDismissListener {
                         removeDialog(id)
                     }
+                    setContentView(R.layout.now_playing)
                     super.show()
+                    initGUI()
                     actionBar?.setDisplayShowCustomEnabled(true)
                     actionBar?.setDisplayShowTitleEnabled(false)
                     actionBar?.setCustomView(R.layout.music_title)
                     actionBar?.setDisplayHomeAsUpEnabled(true)
                     actionBar?.elevation=0F
-                    musicService?.isShow = isShowing
-                    musicService?.initGUI(null)
                     val infoT = layoutInflater.inflate(R.layout.info_mtdt,null)
                     val infoPopup = PopupWindow(
                         infoT,
@@ -314,6 +557,8 @@ class MusicActivity : Activity() {
                     }
                 }
 
+
+
                 override fun onAttachedToWindow() {
 
                     super.onAttachedToWindow()
@@ -333,6 +578,35 @@ class MusicActivity : Activity() {
                     val f = musicService?.mediaPlayer?.playbackParams ?: PlaybackParams()
                     f?.speed = r
                     musicService?.mediaPlayer?.playbackParams = f
+                }
+
+                private fun loadAlbumArtFromMediaStore(id: Long) {
+                    // Generate the standard content URI for the specific album ID
+                    Thread{
+
+
+                        val imgcov = findViewById<ImageView>(R.id.coverSong)
+                        try {
+                            val rt = MediaMetadataRetriever()
+                            val u = ContentUris.withAppendedId(
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                id
+                            )
+                            val artbita = rt.embeddedPicture
+
+                            val artwork = BitmapFactory.decodeByteArray(artbita,0,artbita?.size?:0)
+
+
+                            imgcov?.post{
+                                imgcov?.setImageBitmap(artwork)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            imgcov?.post{
+                                imgcov?.setImageResource(R.drawable.ic_launcher_foreground)
+                            }
+                        }
+                    }.start()
                 }
 
                 override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -395,9 +669,6 @@ class MusicActivity : Activity() {
 
 
 
-                override fun onCreate(savedInstanceState: Bundle?) {
-                    super.onCreate(savedInstanceState)
-                }
 
                 override fun onSaveInstanceState(): Bundle {
                     val o = super.onSaveInstanceState()
@@ -424,15 +695,9 @@ class MusicActivity : Activity() {
 
 
 
-                override fun onDetachedFromWindow() {
-                    musicService!!.mHandler.removeCallbacks(musicService!!.onUpdateGUI)
-                    super.onDetachedFromWindow()
-
-                }
-
 
                 override fun dismiss() {
-                    musicService!!.isShow = false
+                    onUpdateGUI.interrupt()
                     super.dismiss()
                 }
             }
@@ -458,8 +723,22 @@ class MusicActivity : Activity() {
             runOnUiThread {
                 array.addAll(items.map { it.name() })
             }
+            musicService?.setList(items)
         }.start()
 
+    }
+
+
+
+    private fun getPlayBackState(): PlaybackState? {
+        val mediaPlayer = musicService?.mediaPlayer
+        return PlaybackState.Builder()
+            .setState(
+                if (mediaPlayer?.isPlaying == true) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
+                (mediaPlayer?.currentPosition?.toLong() ?: 0L), 0F
+            )
+            .setActions(PlaybackState.ACTION_SEEK_TO or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS or PlaybackState.ACTION_PLAY_PAUSE)
+            .build()
     }
 
 

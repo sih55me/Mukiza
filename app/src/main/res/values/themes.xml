@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Mz" parent="android:Theme.DeviceDefault">
+    <style name="Theme.Mz" parent="android:Theme.DeviceDefault.Settings">
         <item name="android:homeAsUpIndicator">@drawable/back</item>
         <item name="android:actionModeCloseDrawable">@drawable/back</item>
         <item name="android:actionOverflowButtonStyle">@style/Widget.Mz.Opt</item>

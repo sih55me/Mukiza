@@ -67,16 +67,12 @@
 
                 </LinearLayout>
             </HorizontalScrollView>
+
             <LinearLayout
-                android:layout_alignParentTop="true"
-                android:id="@+id/top"
+                android:id="@+id/controls"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-                <TextView
-
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -89,6 +85,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:text="0.30"
+                        android:fontFamily="@font/jetbramo"
                         android:textColor="?android:colorAccent"
                         android:textStyle="bold" />
                     <SeekBar
@@ -104,15 +101,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
+                        android:fontFamily="@font/jetbramo"
                         android:text="1.00" />
                 </LinearLayout>
-            </LinearLayout>
-            <LinearLayout
-                android:id="@+id/controls"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
 
                 <LinearLayout
                     android:layout_width="match_parent"
