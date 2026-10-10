@@ -115,7 +115,7 @@ class MusicActivity : Activity() {
             musicService = binder.getService
             musicService!!
 
-            musicService!!.setList(items)
+
 
             musicService!!.runningActivity = this@MusicActivity
 
@@ -123,19 +123,8 @@ class MusicActivity : Activity() {
                 Toast.makeText(this@MusicActivity, text.text, Toast.LENGTH_SHORT).show()
             }
             musicService!!.runningActivity = this@MusicActivity
-            if(musicService?.songPosition != -1){
-                Handler(mainLooper).postDelayed({
-                    // 1. Set the selection programmatically (e.g., default to the first item)
-                    runOnUiThread {
-                        listview.setItemChecked(select, true)
 
 
-                        // 2. Optional: Scroll the list smoothly to the selected item if it is off-screen
-                        listview.smoothScrollToPosition(select)
-                    }
-                },1500L)
-
-            }
 
             musicBound = true
 
@@ -188,6 +177,7 @@ class MusicActivity : Activity() {
         setContentView(R.layout.activity_music_playlist)
         actionBar?.apply{
             elevation = 0F
+            subtitle = "made by verity :3"
         }
 
 
@@ -243,13 +233,39 @@ class MusicActivity : Activity() {
             }
         })
 
+        Thread{
+            while (musicService==null){}
+
+            musicService?.setList(items)
+            musicService?.songPosition = savedInstanceState?.getInt("currentIndex")?:-1
+            while(musicService?.songs.isNullOrEmpty()){}
+
+            if(musicService?.songPosition != -1){
+                musicService?.playSong()
+                Handler(mainLooper).postDelayed({
+                    // 1. Set the selection programmatically (e.g., default to the first item)
+                    runOnUiThread {
+                        listview.setItemChecked(select, true)
+
+
+                        // 2. Optional: Scroll the list smoothly to the selected item if it is off-screen
+                        listview.smoothScrollToPosition(select)
+                    }
+                },1200L)
+            }
+
+        }.start()
+
     }
 
 
     fun saveDataForRecreate(b:Bundle){
         if(musicService?.songs.isNullOrEmpty().not()){
-            b.putParcelable("currentItem", musicService?.currentItem)
-            b.putInt("currentIndex", musicService?.songPosition ?: -1)
+            if(musicService?.songPosition != -1) {
+                b.putParcelable("currentItem", musicService?.currentItem)
+                b.putInt("currentIndex", musicService?.songPosition ?:0)
+
+            }
         }
     }
 
@@ -302,6 +318,8 @@ class MusicActivity : Activity() {
                     override fun onFastForward() {
                         super.onFastForward()
                     }
+
+
 
 
                     override fun onSkipToPrevious() {
@@ -385,30 +403,32 @@ class MusicActivity : Activity() {
                                 val mCurrentPosition: Int =
                                     mediaPlayer.currentPosition / 1000
                                 val max: Int = mediaPlayer.duration / 1000
+
                                 runOnUiThread {
-                                    seekbar?.setProgress(mCurrentPosition)
-                                    seekbar?.max = max
-                                    currentItem.getAsString(MediaStore.Audio.Media.TITLE)
-                                        ?.let { name ->
-                                            dd?.findViewById<TextView>(R.id.song)?.text =
-                                                name
+                                        seekbar?.setProgress(mCurrentPosition)
+                                        seekbar?.max = max
+                                        currentItem.getAsString(MediaStore.Audio.Media.TITLE)
+                                            ?.let { name ->
+                                                dd?.findViewById<TextView>(R.id.song)?.text =
+                                                    name
+                                            }
+                                        dd?.findViewById<TextView>(R.id.artist)
+                                            ?.setText(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
+                                        dd?.findViewById<TextView>(R.id.dur)?.text =
+                                            timeFormat(mediaPlayer.duration)
+                                        dd?.findViewById<TextView>(R.id.pos)?.text =
+                                            timeFormat(mediaPlayer.currentPosition)
+                                        if (!mediaPlayer.isPlaying) {
+
+                                            play?.setImageResource(R.drawable.play)
+                                            play?.tooltipText = getString(R.string.pause)
+
+                                        } else {
+                                            play?.setImageResource(R.drawable.pause)
+                                            play?.tooltipText = getString(R.string.play)
                                         }
-                                    dd?.findViewById<TextView>(R.id.artist)
-                                        ?.setText(currentItem.getAsString(MediaStore.Audio.Media.ARTIST))
-                                    dd?.findViewById<TextView>(R.id.dur)?.text =
-                                        timeFormat(mediaPlayer.duration)
-                                    dd?.findViewById<TextView>(R.id.pos)?.text =
-                                        timeFormat(mediaPlayer.currentPosition)
-                                    if (!mediaPlayer.isPlaying) {
-
-                                        play?.setImageResource(R.drawable.play)
-                                        play?.tooltipText = getString(R.string.pause)
-
-                                    } else {
-                                        play?.setImageResource(R.drawable.pause)
-                                        play?.tooltipText = getString(R.string.play)
                                     }
-                                }
+
 
                                 med.setPlaybackState(getPlayBackState())
                                 med.setMetadata(
@@ -636,7 +656,7 @@ class MusicActivity : Activity() {
                         cs(2F)
                         true
                     }
-                    val p = sped.addSubMenu("Pitch")
+                    val p = menu.addSubMenu("Pitch")
 
                     p.add("0.25").setOnMenuItemClickListener {
                         cP(0.25F)
@@ -745,12 +765,7 @@ class MusicActivity : Activity() {
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
-        Thread{
-            while (musicService==null){}
-            runOnUiThread{
-                musicService?.songPosition = savedInstanceState.getInt("currentIndex")
-            }
-        }.start()
+
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

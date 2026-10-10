@@ -163,7 +163,6 @@ class MuService: Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorL
     }
 
     fun playSong() = Thread{
-        mediaPlayer.stop()
         mediaPlayer.reset()
 
         val playSong = songs[songPosition]

@@ -85,7 +85,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:text="0.30"
-                        android:fontFamily="@font/jetbramo"
+                        android:fontFamily="monospace"
                         android:textColor="?android:colorAccent"
                         android:textStyle="bold" />
                     <SeekBar
@@ -101,7 +101,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
-                        android:fontFamily="@font/jetbramo"
+                        android:fontFamily="monospace"
                         android:text="1.00" />
                 </LinearLayout>
 
